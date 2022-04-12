@@ -3,10 +3,11 @@ import java.sql.Timestamp;
 
 
 public class PostgreSQLapp {
-    private String dbUrl = "jdbc:postgresql://localhost:5432/mqtt_db";
-    private String dbUser = "mqttuser";
-    private String dbPass = "mqttuser";
+    private final String DB_URL = "jdbc:postgresql://localhost:5432/mqtt_db";
+    private final String DB_USER = "mqttuser";
+    private final String DB_PASS = "mqttuser";
     private Connection dbConnection = null;
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PostgreSQLapp.class);
 
     public PostgreSQLapp() {
     }
@@ -28,7 +29,7 @@ public class PostgreSQLapp {
             request.setString(2, data1 +" - " +data2);
             request.executeUpdate();
         } catch (SQLException ex) {
-            //System.out.println(ex.toString());
+            logger.error("DB error: {}",ex.toString());
             status = false;
         }
 
@@ -37,12 +38,10 @@ public class PostgreSQLapp {
 
     public void connect() {
         try {
-            dbConnection = DriverManager.getConnection(dbUrl, dbUser, dbPass);
-            System.out.println("Connected to the PostgreSQL server successfully.");
-
-
+            dbConnection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
+            logger.info("Connected to the PostgreSQL server successfully.");
         } catch (SQLException ex) {
-            System.out.println("Connection PostgreSQL error: " + ex.toString());
+            logger.error("Connection PostgreSQL error:  {}",ex.toString());
         }
     }
 }

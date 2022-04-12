@@ -1,19 +1,17 @@
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-//import com.fasterxml.jackson.core.JsonProcessingException;
-
-
 import org.eclipse.paho.client.mqttv3.*;
 
 public class MQTTapp {
-    private String mqttServer = "tcp://srv2.clusterfly.ru";
-    private int mqttPort = 9991;
-    private String mqttClientId = "ClientDB";
-    private String mqttLogin = "user_e26b81e5";
-    private String mqttPass = "pass_3a57aa79";
-    private String mqttTopic1 = "user_e26b81e5/uptime";
-    private String mqttTopic2 = "user_e26b81e5/test";
-    private PostgreSQLapp sqlApp = new PostgreSQLapp();;
+    private final String MQTT_SERVER = "tcp://srv2.clusterfly.ru";
+    private final int MQTT_PORT = 9991;
+    private final String MQTT_CLIENT_ID = "ClientDB";
+    private final String MQTT_LOGIN = "user_e26b81e5";
+    private final String MQTT_PASS = "pass_3a57aa79";
+    private final String MQTT_TOPIC1 = "user_e26b81e5/uptime";
+    private final String MQTT_TOPIC2 = "user_e26b81e5/test";
+    private final PostgreSQLapp sqlApp = new PostgreSQLapp();
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MQTTapp.class);
 
     public MQTTapp() {
         sqlApp.connect();
@@ -22,47 +20,45 @@ public class MQTTapp {
 
     public void connect() {
         try {
-            IMqttClient mqttClient = new MqttClient(mqttServer + ":" + String.valueOf(mqttPort), mqttClientId);
+            IMqttClient mqttClient = new MqttClient(MQTT_SERVER + ":" + MQTT_PORT, MQTT_CLIENT_ID);
             MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
             mqttConnectOptions.setAutomaticReconnect(true);
             mqttConnectOptions.setCleanSession(true);
             mqttConnectOptions.setConnectionTimeout(5);
-            mqttConnectOptions.setUserName(mqttLogin);
-            mqttConnectOptions.setPassword(mqttPass.toCharArray());
+            mqttConnectOptions.setUserName(MQTT_LOGIN);
+            mqttConnectOptions.setPassword(MQTT_PASS.toCharArray());
 
             mqttClient.setCallback(new MQTTCallback());
             mqttClient.connect(mqttConnectOptions);
-            mqttClient.subscribe(mqttTopic1);
-            mqttClient.subscribe(mqttTopic2);
+            mqttClient.subscribe(MQTT_TOPIC1);
+            mqttClient.subscribe(MQTT_TOPIC2);
 
         } catch (MqttException ex) {
-            //System.out.println(ex.toString());
-            System.out.println("Connection MQTT error: " + ex.toString());
+            logger.error("Connection MQTT error: {}",ex.toString());
         }
     }
 
-    public class MQTTCallback implements MqttCallback {
+    private class MQTTCallback implements MqttCallback {
         @Override
         public void connectionLost(Throwable throwable) {
-            System.out.println("Connection lost...");
+            logger.error("Connection lost");
         }
 
         @Override
         public void messageArrived(String s, MqttMessage mqttMessage)  {
-            System.out.print("Get message: " + mqttMessage.toString());
+            logger.debug("Get message: {}",mqttMessage.toString());
             try {
                 ObjectMapper objectMapper = new ObjectMapper();
                 JsonNode mqttData = objectMapper.readTree(mqttMessage.toString());
 
                 if (mqttData.get("uptime").asText() != null || mqttData.get("random").asText() != null) {
                     if (sqlApp.sendData(mqttData.get("uptime").asText(), mqttData.get("random").asText())) {
-                        System.out.println(" data send ok");
                     } else {
-                        System.out.println(" data send error");
+                        logger.error("Data sending to db error");
                     }
                 }
             } catch(Exception ex){
-                System.out.println(" json error");
+                logger.error("Json error");
             }
         }
 
